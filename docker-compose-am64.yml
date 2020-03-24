@@ -1,0 +1,36 @@
+version: "3.2"
+volumes:
+    prometheus-volume:
+    grafana-volume:
+services:
+    lwrf-cfh:
+        build:
+            context: .
+            dockerfile: Dockerfile.amd64
+        # Listens for UDP broadcast traffic on port 9761 (LightwaveRF responses)
+        # Listens for HTTP (TCP) traffic on 9191 (prometheus exporter)
+        ports:
+          - "9191:9191"
+          - "9761:9761/udp"
+    prometheus:
+        build:
+            context: prometheus/
+            dockerfile: Dockerfile.amd64
+        # Listens for HTTP (TCP) traffic on 9090 (prometheus UI)
+        ports:
+          - "9090:9090"
+        volumes:
+            - prometheus-volume:/app/data/
+    grafana:
+        image: grafana/grafana:5.4.5
+        depends_on:
+            - prometheus
+        # Listens for HTTP (TCP) traffic on 3000 (Grafana UI)
+        ports:
+          - "3000:3000"
+        environment:
+            - GF_SECURITY_ADMIN_PASSWORD=lightwave
+            - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+        volumes:
+            - ./grafana/provisioning/:/etc/grafana/provisioning/:ro
+            - grafana-volume:/var/lib/grafana

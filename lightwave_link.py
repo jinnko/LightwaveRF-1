@@ -582,15 +582,17 @@ def load_config():
     with file("config.yml", "r") as sFH:
         dConfig = yaml.load(sFH)
 
-    numeric_serials=[key for key in dConfig.keys() if key != str(key)]
+    numeric_serials = [key for key in dConfig["Devices"].keys() if key != str(key)]
     if numeric_serials:
         sLog.info(
             "Found numeric serial strings %r in config file, attempting fix",
             numeric_serials)
-        dConfig={str(key):value for (key,value) in dConfig.iteritems()}
-        sLog.debug("Config: %r",dConfig)
+        dConfig["Devices"] = {
+            str(key): value for (key, value) in dConfig["Devices"].iteritems()
+        }
+        sLog.debug("Config: %r", dConfig["Devices"])
 
-    invalid_serials=[key for key in dConfig.keys() if len(key) != 6]
+    invalid_serials = [key for key in dConfig["Devices"].keys() if len(key) != 6]
     if invalid_serials:
         sLog.warn(
             "Found invalid serial strings %r in config file",
@@ -679,6 +681,8 @@ def main():
     prometheus_client.start_http_server(9191)
 
     sLink = LightwaveLink()
+    if 'LinkAddress' in dConfig:
+        sLink.rAddress = dConfig['LinkAddress']
     sLink.test_connectivity()
     sLink.scan_devices()
 
@@ -697,11 +701,11 @@ def main():
                 "read", "statusPush", "statusOn", "statusOff"):
             rSerial = dResponse["serial"]
             if rSerial not in dStatus:
-                if rSerial not in dConfig:
+                if rSerial not in dConfig["Devices"]:
                     sLog.warn(
                         "Device with serial %s not present in config file",
                         rSerial)
-                rName = dConfig.get(rSerial, rSerial)
+                rName = dConfig["Devices"].get(rSerial, rSerial)
                 dStatus[rSerial] = TRVStatus(rName)
             dStatus[rSerial].update(dResponse)
             sLog.info(str(dStatus[rSerial]))

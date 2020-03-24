@@ -1,0 +1,29 @@
+# Intended for use on any amd64 system
+FROM debian:10
+
+ARG PV=2.16.0
+ARG PA=amd64
+
+RUN apt-get update \
+ && apt-get -fy -o DPkg::Options::=--force-confold --autoremove full-upgrade \
+ && apt-get install -fy wget \
+    dumb-init \
+ && apt clean \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN cd /tmp \
+ && wget https://github.com/prometheus/prometheus/releases/download/v${PV}/prometheus-${PV}.linux-${PA}.tar.gz \
+ && tar zxvf prometheus-${PV}.linux-${PA}.tar.gz \
+ && cd prometheus-* \
+ && mkdir /app/ \
+ && cp promtool prometheus prometheus.yml /app \
+ && rm -rf /tmp/prometheus-*
+
+EXPOSE 9090
+WORKDIR /app/
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+VOLUME /app/data/
+CMD /app/prometheus --storage.tsdb.retention=10y
+
+COPY ./prometheus.yml /app/

@@ -1,0 +1,22 @@
+# Intended for use on any amd64 system
+FROM debian:10
+
+RUN apt-get update \
+ && apt-get -fy -o DPkg::Options::=--force-confold --autoremove full-upgrade \
+ && apt-get install -fy \
+    dumb-init \
+    python \
+    python-pip \
+ && apt clean \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app/
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD python /app/lightwave_link.py
+
+COPY ./requirements.txt /app/
+RUN python -m pip install -r /app/requirements.txt \
+ && apt purge -fy --autoremove build-essential
+
+# Do this last, as script is still in development and changes often
+COPY ./lightwave_link.py ./config.yml /app/

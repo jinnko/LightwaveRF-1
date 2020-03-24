@@ -23,11 +23,20 @@
 # '123456':Device with numeric serial string
 # '012345':Device with numeric serial string with leading zero
 #
-9993FE: Boiler switch
-5FC502: Lounge
-DBC302: Playroom
-DCC302: Hallway
-47C702: Front door
-CB3FFE: Small bedroom
-67C702: Back bedroom
-24C702: Master bedroom
+
+# IP address of your LightwaveRF Link station.  Required when running
+# in docker on a bridged network.  Comment this out to fall back to
+# using broadcast (255.255.255.255) packets on the same network, for
+# example when you're running either with network=host in docker, or
+# when the app is running directly on your host.
+LinkAddress: 192.168.88.128
+
+Devices:
+  9993FE: Boiler switch
+  5FC502: Lounge
+  DBC302: Playroom
+  DCC302: Hallway
+  47C702: Front door
+  CB3FFE: Small bedroom
+  67C702: Back bedroom
+  24C702: Master bedroom
