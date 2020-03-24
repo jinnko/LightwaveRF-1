@@ -4,7 +4,7 @@
 #   1. Designate which device controls the boiler - must have name "Boiler
 #      switch"
 #   2. Give names to radiators which appear in logs and, importantly,
-#      prometheus time-series data 
+#      prometheus time-series data
 #
 # Format:
 #

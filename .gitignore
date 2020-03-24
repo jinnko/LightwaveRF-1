@@ -107,3 +107,6 @@ venv.bak/
 
 # Docker Compose
 docker-compose.override.yml
+
+# Localisations
+config.yml
