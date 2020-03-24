@@ -108,14 +108,14 @@ class LightwaveLink(object):
         Link"""
         import socket
         sSock = socket.socket(
-            socket.AF_INET, 
+            socket.AF_INET,
             socket.SOCK_DGRAM)
         tLocalAddress = (
             "0.0.0.0",
             self.LIGHTWAVE_LINK_RESPONSE_PORT)
         sSock.bind(tLocalAddress)
         sSock.setsockopt(
-            socket.SOL_SOCKET, 
+            socket.SOL_SOCKET,
             socket.SO_BROADCAST,
             1)
         return sSock
@@ -159,7 +159,7 @@ class LightwaveLink(object):
             rCommand,
             tDestinationAddress)
         self.sSock.sendto(
-            rCommand, 
+            rCommand,
             tDestinationAddress)
 
     def get_response(self):
@@ -167,8 +167,8 @@ class LightwaveLink(object):
         try:
             fTimeout = (
                         self.COMMAND_TIMEOUT_SECONDS
-                        + time.time() 
-                        - self.fLastCommandTime 
+                        + time.time()
+                        - self.fLastCommandTime
                         )
             dResponse = self.sResponses.get(True, fTimeout)
             fDelay = time.time() - self.fLastCommandTime
@@ -209,8 +209,8 @@ class LightwaveLink(object):
                         sQueue.put(dMessage)
                     else:
                         sLog.log(
-                            1, 
-                            "Discarding duplicate trans: %s", 
+                            1,
+                            "Discarding duplicate trans: %s",
                             iResponseTrans)
                 elif rMessage.strip().endswith(",OK"):
                     sLog.log(1, "Ignoring acknowledgement")
@@ -259,7 +259,7 @@ class LightwaveLink(object):
         """
         {"trans":21,            "mac":"20:3B:85",
         "time":1544985980,      "pkt":"error",
-        "fn":"nonRegistered", 
+        "fn":"nonRegistered",
         "payload":"Not yet registered. See LightwaveLink"}
         """
 
@@ -376,6 +376,7 @@ class LightwaveLink(object):
                 iBits >>= 1
         sLog.debug("Rooms known to hub: %s", lRooms)
         return lRooms
+
 
 class TRVStatus(object):
     """
@@ -577,6 +578,7 @@ class TRVStatus(object):
                 **dLocals
                 ))
 
+
 def load_config():
     import yaml
     with file("config.yml", "r") as sFH:
@@ -601,6 +603,7 @@ def load_config():
         sLog.info("* Enclose serial strings starting with a 0 in quotes")
 
     return dConfig
+
 
 def call_for_heat(sLink, dStatus):
     lCalling = are_calling_for_heat(dStatus)
@@ -632,6 +635,7 @@ def call_for_heat(sLink, dStatus):
     sLog.info("Call for heat: %s (command: %s)", lNames, rCommand)
     sLink.send_command(rCommand)
 
+
 def are_calling_for_heat(dStatus):
     lCalling = []
     for sDevice in dStatus.itervalues():
@@ -641,6 +645,7 @@ def are_calling_for_heat(dStatus):
             lCalling.append(sDevice)
 
     return lCalling
+
 
 def scan_stale_devices(dStatus, sLink):
     # Generator which _may_ scan stale devices, if it hasn't done so recently
@@ -733,6 +738,7 @@ def main():
         # Request status updates from devices we've not seen for a while.
         # Self-limits how often it performs scans.
         siStaleScanner.next()
+
 
 if __name__ == "__main__":
     main()
