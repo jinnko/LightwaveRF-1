@@ -2357,12 +2357,12 @@
           }
         ],
         "executionErrorState": "alerting",
-        "for": "6h",
+        "for": "1h",
         "frequency": "1m",
         "handler": 1,
         "message": "This alert fires when one or more devices have not sent a status update in the last 6h.",
         "name": "Stale status",
-        "noDataState": "no_data",
+        "noDataState": "alerting",
         "notifications": []
       },
       "aliasColors": {},
@@ -2444,7 +2444,7 @@
           "decimals": null,
           "format": "short",
           "label": "Status update count (6h)",
-          "logBase": 1,
+          "logBase": 2,
           "max": null,
           "min": "0",
           "show": true
@@ -2554,5 +2554,5 @@
   "timezone": "",
   "title": "LightwaveRF Heating",
   "uid": "LJ_reSigk",
-  "version": 10
+  "version": 11
 }
