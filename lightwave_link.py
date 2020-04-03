@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python3
 # encoding: utf8
 """
 Monitoring tool for LightwaveRF Heating, based on the API published at
@@ -17,7 +17,7 @@ import prometheus_client
 logging.basicConfig(
     stream=sys.stdout,
     format="%(asctime)-15s %(levelname)-7s %(message)s ",
-    level=logging.INFO)
+    level=logging.DEBUG)
 sLog = logging.getLogger('LightwaveLink')
 
 COMMAND = "!R{RoomNo}D{DeviceNo}F{FunctionType}P{Parameter}|{Line1}|{Line2}"
@@ -73,7 +73,8 @@ class LightwaveLink(object):
     """
     LIGHTWAVE_LINK_COMMAND_PORT = 9760    # Send to this address...
     LIGHTWAVE_LINK_RESPONSE_PORT = 9761   # ... and get response on this one
-    MIN_SECONDS_BETWEEN_COMMANDS = 3.0
+    MIN_SECONDS_BETWEEN_COMMANDS = 5.0
+    MAX_TRANSACTION_VALUE = 255
     COMMAND_TIMEOUT_SECONDS = 5
 
     fLastCommandTime = ProtectedAttribute()
@@ -118,14 +119,16 @@ class LightwaveLink(object):
             socket.SOL_SOCKET,
             socket.SO_BROADCAST,
             1)
+        sSock.setblocking(0)
         return sSock
 
     @staticmethod
     def sequence_generator(iInt=None):
-        import time
         if not iInt:
-            iInt = 100
+            iInt = 1
         while True:
+            if iInt > self.MAX_TRANSACTION_VALUE:
+                iInt = 1
             yield iInt
             iInt += 1
 
@@ -141,7 +144,7 @@ class LightwaveLink(object):
             time.sleep(fWait)
 
         if iTransactionNumber is None:
-            iTransactionNumber = self.siTransactionNumber.next()
+            iTransactionNumber = next(self.siTransactionNumber)
 
         with self.sLock:
             self.iLastTransactionNumber = iTransactionNumber
@@ -159,7 +162,7 @@ class LightwaveLink(object):
             rCommand,
             tDestinationAddress)
         self.sSock.sendto(
-            rCommand,
+            bytes(rCommand.encode('utf-8')),
             tDestinationAddress)
 
     def get_response(self):
@@ -181,7 +184,7 @@ class LightwaveLink(object):
 
     def create_listener(self, sSock):
         import threading
-        import Queue as queue
+        import queue as queue
         sQueue = queue.Queue()
         sQueue.Empty = queue.Empty
         def run():
@@ -189,35 +192,44 @@ class LightwaveLink(object):
             This makes duplicate messages very common."""
             import json
             import collections
+            from select import select
             # nonlocal sSock
             # nonlocal sQueue
             iTransactionNumber = 0
+            sTimeout = 30
             lPreviousMessages = collections.deque(maxlen=10)
             while True:
-                rMessage = sSock.recv(1024)
-                if rMessage in lPreviousMessages:
-                    sLog.log(1, "Ignoring duplicate JSON message")
-                    continue
-                lPreviousMessages.appendleft(rMessage)
-                sLog.log(2, "RAW response: %s", rMessage)
-                if rMessage.startswith("*!{"):
-                    rJSON = rMessage[len("*!"):]
-                    dMessage = json.loads(rJSON)
-                    iResponseTrans = int(dMessage.get("trans", 0))
-                    if iResponseTrans > iTransactionNumber:
-                        iTransactionNumber = iResponseTrans
-                        sQueue.put(dMessage)
+                sLog.debug(f"Waiting {sTimeout} seconds for message on socket")
+                ready = select([sSock], [], [], sTimeout)
+                if ready[0]:
+                    rMessage = sSock.recv(4096).strip()
+                    sLog.debug(f"RAW response: {rMessage}")
+                    if rMessage in lPreviousMessages:
+                        sLog.log(1, "Ignoring duplicate JSON message")
+                        continue
+                    lPreviousMessages.appendleft(rMessage)
+                    if rMessage.startswith(bytes("*!{".encode('utf-8'))):
+                        rJSON = rMessage[len("*!"):]
+                        dMessage = json.loads(rJSON)
+                        iResponseTrans = int(dMessage.get("trans", 0))
+                        if iResponseTrans > iTransactionNumber:
+                            iTransactionNumber = iResponseTrans
+                            sQueue.put(dMessage)
+                        else:
+                            sLog.log(
+                                1,
+                                "Discarding duplicate trans: %s",
+                                iResponseTrans)
+                    elif rMessage.endswith(bytes(",OK".encode('utf-8'))):
+                        sLog.log(1, "Ignoring acknowledgement")
                     else:
-                        sLog.log(
-                            1,
-                            "Discarding duplicate trans: %s",
-                            iResponseTrans)
-                elif rMessage.strip().endswith(",OK"):
-                    sLog.log(1, "Ignoring acknowledgement")
+                        sLog.warning(
+                            "Discarding non-JSON response: %s",
+                            rMessage)
                 else:
-                    sLog.warning(
-                        "Discarding non-JSON response: %s",
-                        rMessage)
+                    sLog.warning(f"No message received on socket within {sTimeout} seconds")
+                    continue
+
         def runner():
             # nonlocal run
             # nonlocal sLog
@@ -226,7 +238,7 @@ class LightwaveLink(object):
                 try:
                     run()
                 except:
-                    sLog.error(
+                    ssLog.error(
                         "Exception from Lightwave Listener thread",
                         exc_info=True)
 
@@ -473,7 +485,7 @@ class TRVStatus(object):
         self.slot = None
 
     def update(self, dStatus):
-        for rKey, mValue in dStatus.iteritems():
+        for rKey, mValue in dStatus.items():
             setattr(self, rKey, mValue)
 
         if dStatus["fn"] == "read":
@@ -581,20 +593,20 @@ class TRVStatus(object):
 
 def load_config():
     import yaml
-    with file("config.yml", "r") as sFH:
-        dConfig = yaml.load(sFH)
+    with open("config.yml", "r") as sFH:
+        dConfig = yaml.safe_load(sFH)
 
-    numeric_serials = [key for key in dConfig["Devices"].keys() if key != str(key)]
+    numeric_serials = [key for key in list(dConfig["Devices"].keys()) if key != str(key)]
     if numeric_serials:
         sLog.info(
             "Found numeric serial strings %r in config file, attempting fix",
             numeric_serials)
         dConfig["Devices"] = {
-            str(key): value for (key, value) in dConfig["Devices"].iteritems()
+            str(key): value for (key, value) in dConfig["Devices"].items()
         }
         sLog.debug("Config: %r", dConfig["Devices"])
 
-    invalid_serials = [key for key in dConfig["Devices"].keys() if len(key) != 6]
+    invalid_serials = [key for key in list(dConfig["Devices"].keys()) if len(key) != 6]
     if invalid_serials:
         sLog.warn(
             "Found invalid serial strings %r in config file",
@@ -605,10 +617,12 @@ def load_config():
     return dConfig
 
 
-def call_for_heat(sLink, dStatus):
+def call_for_heat(sLink, dStatus, skipCfH=False):
+    from time import sleep
+
     lCalling = are_calling_for_heat(dStatus)
 
-    for sDevice in dStatus.itervalues():
+    for sDevice in dStatus.values():
         if sDevice.rName == "Boiler switch":
             break
     else:
@@ -623,22 +637,33 @@ def call_for_heat(sLink, dStatus):
     OFF = 50.0
     ON = 60.0
     if lCalling:
+        hackCommand = rCommandTemplate.format(sDevice.slot, OFF)
         rCommand = rCommandTemplate.format(sDevice.slot, ON)
     else:
+        hackCommand = rCommandTemplate.format(sDevice.slot, ON)
         rCommand = rCommandTemplate.format(sDevice.slot, OFF)
 
+    lNames = [x.rName for x in lCalling]
+    
     if bool(sDevice.output) == bool(lCalling):
-        sLog.info("Call for heat: NOOP (heating: %s)", bool(sDevice.output))
+        sLog.info("Call for heat: NOOP (heating: %s, devices: %s)", bool(sDevice.output), lNames)
         return
 
-    lNames = [x.rName for x in lCalling]
-    sLog.info("Call for heat: %s (command: %s)", lNames, rCommand)
-    sLink.send_command(rCommand)
+    if skipCfH:
+        sLog.info("Skipping call for heat: %s (command: %s)", lNames, rCommand)
+    else:
+        sLog.info("Call for heat HACK to force real command later: (heating: %s, devices: %s) (command: %s)", bool(sDevice.output), lNames, hackCommand)
+        sLink.send_command(hackCommand)
+        sleep(5)
+
+        sLog.info("Call for heat: (heating: %s, devices: %s) (command: %s)", bool(sDevice.output), lNames, rCommand)
+        sLink.send_command(rCommand)
+        sleep(10)
 
 
 def are_calling_for_heat(dStatus):
     lCalling = []
-    for sDevice in dStatus.itervalues():
+    for sDevice in dStatus.values():
         if sDevice.prod != "valve":
             continue
         if sDevice.output:
@@ -661,13 +686,13 @@ def scan_stale_devices(dStatus, sLink):
         if iNow < iNextScanTime:
             # Not yet time to scan, wait until next opportunity
             sLog.debug(
-                "Stale scan skipped, MIN_SCAN_INTERVAL_SECONDS not yet lapsed")
+                "Stale scan skipped, MIN_SCAN_INTERVAL_SECONDS not yet lapsed. Next scan in {}".format(iNextScanTime - iNow))
             yield
         else:
             iNextScanTime = iNow + MIN_SCAN_INTERVAL_SECONDS
             sLog.debug("Stale scan started")
 
-        for sDevice in dStatus.values():
+        for sDevice in list(dStatus.values()):
             if sDevice.nSlot is None:
                 # Not addressable, cannot ask for an update
                 sLog.debug("Device %s is not addressable", sDevice.rName)
@@ -717,7 +742,7 @@ def main():
 
             # Try to avoid hysteria following sLink.scan_devices()
             if sLink.sResponses.empty():
-                call_for_heat(sLink, dStatus)
+                call_for_heat(sLink, dStatus, dConfig['skipCfH'])
         elif dResponse.get("fn") in (
                 "ack",
                 "getStatus",
@@ -737,7 +762,7 @@ def main():
 
         # Request status updates from devices we've not seen for a while.
         # Self-limits how often it performs scans.
-        siStaleScanner.next()
+        next(siStaleScanner)
 
 
 if __name__ == "__main__":

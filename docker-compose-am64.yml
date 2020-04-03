@@ -9,32 +9,42 @@ services:
             dockerfile: Dockerfile.amd64
         # Listens for UDP broadcast traffic on port 9761 (LightwaveRF responses)
         # Listens for HTTP (TCP) traffic on 9191 (prometheus exporter)
-        ports:
-          - "9191:9191"
-          - "9761:9761/udp"
+        network_mode: host
+        userns_mode: host
+        #ports:
+        #  - "9191:9191"
+        #  - "9761:9761/udp"
+        volumes:
+            - ./config.yml:/app/config.yml:ro
+            - ./lightwave_link.py:/app/lightwave_link.py:ro
     prometheus:
         build:
             context: prometheus/
             dockerfile: Dockerfile.amd64
         # Listens for HTTP (TCP) traffic on 9090 (prometheus UI)
-        ports:
-          - "9090:9090"
+        network_mode: host
+        userns_mode: host
+        #ports:
+        #  - "9090:9090"
         volumes:
+            - ./prometheus/prometheus.yml:/app/prometheus.yml
             - prometheus-volume:/app/data/
     grafana:
         image: grafana/grafana:5.4.5
         depends_on:
             - prometheus
         # Listens for HTTP (TCP) traffic on 3000 (Grafana UI)
-        ports:
-          - "3000:3000"
+        network_mode: host
+        userns_mode: host
+        #ports:
+        #  - "3000:3000"
         environment:
             - GF_SECURITY_ADMIN_PASSWORD=lightwave
             - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
             - GF_AUTH_ANONYMOUS_ENABLED=true
             - GF_SMTP_ENABLED=false
             - GF_SMTP_HOST=smtp.local:587
-            - GF_SMTP_FROM_ADDRESS=grafana-lightwave-cfh@local
+            - GF_SMTP_FROM_ADDRESS=grafana-lightwave-cfh@ixydo.org
             - GF_SMTP_FROM_NAME="Grafana LightwaveRF Call for Heat"
         volumes:
             - ./grafana/provisioning/:/etc/grafana/provisioning/:ro
