@@ -74,7 +74,6 @@ class LightwaveLink(object):
     LIGHTWAVE_LINK_COMMAND_PORT = 9760    # Send to this address...
     LIGHTWAVE_LINK_RESPONSE_PORT = 9761   # ... and get response on this one
     MIN_SECONDS_BETWEEN_COMMANDS = 5.0
-    MAX_TRANSACTION_VALUE = 255
     COMMAND_TIMEOUT_SECONDS = 5
 
     fLastCommandTime = ProtectedAttribute()
@@ -125,10 +124,8 @@ class LightwaveLink(object):
     @staticmethod
     def sequence_generator(iInt=None):
         if not iInt:
-            iInt = 1
+            iInt = 100
         while True:
-            if iInt > self.MAX_TRANSACTION_VALUE:
-                iInt = 1
             yield iInt
             iInt += 1
 
