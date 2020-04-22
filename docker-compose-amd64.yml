@@ -27,7 +27,7 @@ services:
             - ./prometheus/prometheus.yml:/app/prometheus.yml
             - prometheus-volume:/app/data/
     grafana:
-        image: grafana/grafana:5.4.5
+        image: grafana/grafana:6.7.2
         depends_on:
             - prometheus
         # Listens for HTTP (TCP) traffic on 3000 (Grafana UI)
