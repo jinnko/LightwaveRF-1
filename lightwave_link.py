@@ -246,6 +246,9 @@ class LightwaveLink(object):
                 elif rMessage.endswith(",OK"):
                     continue
 
+                elif rMessage.startswith("?M="):
+                    sLog.info("Detected apparent reboot of Lightwave Link.")
+
                 else:
                     sLog.warning(f"Discarding non-JSON response: {rMessage}")
 
