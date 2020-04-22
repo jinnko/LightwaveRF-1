@@ -684,7 +684,7 @@ def scan_stale_devices(dStatus, sLink):
             sLog.debug("Stale scan started")
 
         for sDevice in list(dStatus.values()):
-            if sDevice.nSlot is None:
+            if sDevice.slot is None:
                 # Not addressable, cannot ask for an update
                 sLog.debug(f"Device is not addressable: {sDevice}")
                 continue
@@ -692,7 +692,7 @@ def scan_stale_devices(dStatus, sLink):
                 sLog.info(
                     "%s status is stale, requesting update...",
                     sDevice.rName)
-                sLink.send_command("!R{}F*r".format(sDevice.nSlot))
+                sLink.send_command("!R{}F*r".format(sDevice.slot))
 
         yield
 
