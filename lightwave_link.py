@@ -693,7 +693,7 @@ def scan_stale_devices(dStatus, sLink):
     # Generator which _may_ scan stale devices, if it hasn't done so recently
     import time
 
-    STALE_THRESHOLD_SECONDS   = 3*60*60  # 3h
+    STALE_THRESHOLD_SECONDS   = 1*60*60  # 1h
     MIN_SCAN_INTERVAL_SECONDS =   30*60  # 30m
 
     iNextScanTime = 0
