@@ -101,7 +101,7 @@ class LightwaveLink(object):
         self.fLastCommandTime = 0.0
         self.iLastTransactionNumber = 0
         self.rLastCommand = ""
-        self.sThead = None
+        self.sThread = None
 
     def create_socket(self):
         """Create a listening socket to receive UDP messages from the Lightwave
@@ -137,7 +137,7 @@ class LightwaveLink(object):
         fNext = self.fLastCommandTime + self.MIN_SECONDS_BETWEEN_COMMANDS
         fWait = fNext - fNow
         if fWait > 0.0:
-            sLog.log(5, "Rate limit send_command(): %s", fWait)
+            sLog.debug("Rate limit send_command(): %s", fWait)
             time.sleep(fWait)
 
         if iTransactionNumber is None:
@@ -235,7 +235,7 @@ class LightwaveLink(object):
                 try:
                     run()
                 except:
-                    ssLog.error(
+                    sLog.error(
                         "Exception from Lightwave Listener thread",
                         exc_info=True)
 
@@ -335,7 +335,7 @@ class LightwaveLink(object):
                     sLog.info("Successfully paired!")
                     return True
         except KeyboardInterrupt:
-            sLog.warn("Aborting registration process due to SIGINT")
+            sLog.warning("Aborting registration process due to SIGINT")
             return False
 
     def scan_devices(self):
@@ -456,6 +456,7 @@ class TRVStatus(object):
         )
 
     def __init__(self, rName):
+        sLog.debug(f"Initializing TRVStatus({rName})")
         # Local data
         self.rName = rName
 
@@ -605,7 +606,7 @@ def load_config():
 
     invalid_serials = [key for key in list(dConfig["Devices"].keys()) if len(key) != 6]
     if invalid_serials:
-        sLog.warn(
+        sLog.warning(
             "Found invalid serial strings %r in config file",
             invalid_serials)
         sLog.info("* Ensure serial strings are all 6 characters long")
@@ -692,7 +693,7 @@ def scan_stale_devices(dStatus, sLink):
         for sDevice in list(dStatus.values()):
             if sDevice.nSlot is None:
                 # Not addressable, cannot ask for an update
-                sLog.debug("Device %s is not addressable", sDevice.rName)
+                sLog.debug(f"Device is not addressable: {sDevice}")
                 continue
             if not sDevice.time or (iNow - sDevice.time >STALE_THRESHOLD_SECONDS):
                 sLog.info(
@@ -729,7 +730,7 @@ def main():
             rSerial = dResponse["serial"]
             if rSerial not in dStatus:
                 if rSerial not in dConfig["Devices"]:
-                    sLog.warn(
+                    sLog.warning(
                         "Device with serial %s not present in config file",
                         rSerial)
                 rName = dConfig["Devices"].get(rSerial, rSerial)
@@ -740,6 +741,7 @@ def main():
             # Try to avoid hysteria following sLink.scan_devices()
             if sLink.sResponses.empty():
                 call_for_heat(sLink, dStatus, dConfig['skipCfH'])
+
         elif dResponse.get("fn") in (
                 "ack",
                 "getStatus",
@@ -755,7 +757,7 @@ def main():
         elif dResponse.get("type") == "log":
             pass
         else:
-            sLog.warn("Unhandled response:\n%s", dResponse)
+            sLog.warning("Unhandled response:\n%s", dResponse)
 
         # Request status updates from devices we've not seen for a while.
         # Self-limits how often it performs scans.
