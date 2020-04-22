@@ -118,7 +118,6 @@ class LightwaveLink(object):
             socket.SOL_SOCKET,
             socket.SO_BROADCAST,
             1)
-        sSock.setblocking(0)
         return sSock
 
     @staticmethod
@@ -159,7 +158,7 @@ class LightwaveLink(object):
             rCommand,
             tDestinationAddress)
         self.sSock.sendto(
-            bytes(rCommand.encode('utf-8')),
+            bytes(rCommand.encode('ascii')),
             tDestinationAddress)
 
     def get_response(self):
@@ -189,43 +188,37 @@ class LightwaveLink(object):
             This makes duplicate messages very common."""
             import json
             import collections
-            from select import select
             # nonlocal sSock
             # nonlocal sQueue
             iTransactionNumber = 0
-            sTimeout = 30
             lPreviousMessages = collections.deque(maxlen=10)
             while True:
-                sLog.debug(f"Waiting {sTimeout} seconds for message on socket")
-                ready = select([sSock], [], [], sTimeout)
-                if ready[0]:
-                    rMessage = sSock.recv(4096).strip()
-                    sLog.debug(f"RAW response: {rMessage}")
-                    if rMessage in lPreviousMessages:
-                        sLog.log(1, "Ignoring duplicate JSON message")
-                        continue
-                    lPreviousMessages.appendleft(rMessage)
-                    if rMessage.startswith(bytes("*!{".encode('utf-8'))):
-                        rJSON = rMessage[len("*!"):]
-                        dMessage = json.loads(rJSON)
-                        iResponseTrans = int(dMessage.get("trans", 0))
-                        if iResponseTrans > iTransactionNumber:
-                            iTransactionNumber = iResponseTrans
-                            sQueue.put(dMessage)
-                        else:
-                            sLog.log(
-                                1,
-                                "Discarding duplicate trans: %s",
-                                iResponseTrans)
-                    elif rMessage.endswith(bytes(",OK".encode('utf-8'))):
-                        sLog.log(1, "Ignoring acknowledgement")
-                    else:
-                        sLog.warning(
-                            "Discarding non-JSON response: %s",
-                            rMessage)
-                else:
-                    sLog.warning(f"No message received on socket within {sTimeout} seconds")
+                rMessage = sSock.recv(1024).strip().decode('ascii')
+
+                if rMessage in lPreviousMessages:
+                    #sLog.debug("Ignoring duplicate JSON message")
                     continue
+
+                sLog.debug(f"RAW response: {rMessage}")
+                lPreviousMessages.appendleft(rMessage)
+
+                if rMessage.startswith("*!{"):
+                    rJSON = rMessage[len("*!"):]
+                    dMessage = json.loads(rJSON)
+                    iResponseTrans = int(dMessage.get("trans", 0))
+                    if iResponseTrans > iTransactionNumber:
+                        iTransactionNumber = iResponseTrans
+                        sQueue.put(dMessage)
+                    else:
+                        sLog.debug(
+                            "Discarding duplicate trans: %s",
+                            iResponseTrans)
+
+                elif rMessage.endswith(",OK"):
+                    continue
+
+                else:
+                    sLog.warning(f"Discarding non-JSON response: {rMessage}")
 
         def runner():
             # nonlocal run
