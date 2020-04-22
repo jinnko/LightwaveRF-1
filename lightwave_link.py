@@ -745,7 +745,8 @@ def main():
             continue
 
         if dResponse.get("fn") in (
-                "read", "statusPush", "statusOn", "statusOff"):
+                    "read", "statusPush", "statusOn", "statusOff"
+                ) and 'serial' in dResponse:
             rSerial = dResponse["serial"]
             if rSerial not in dStatus:
                 if rSerial not in dConfig["Devices"]:
@@ -765,6 +766,7 @@ def main():
                 "ack",
                 "getStatus",
                 "home",
+                "heatingFunction",
                 "hubCall",
                 "off",      # Human pushed button on TRV
                 "on",       # Human pushed button on TRV
