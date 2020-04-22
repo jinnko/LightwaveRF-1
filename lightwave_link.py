@@ -740,7 +740,8 @@ def main():
         try:
             # Avoid entering an unblockable system call, as that would prevent
             # signals like SIGINT (KeyboardInterrupt) being delivered
-            dResponse = sLink.sResponses.get(True, 3600)
+            dResponse = sLink.sResponses.get(True, 60)
+            sLog.debug(f"Message received on queue: {dResponse}")
         except sLink.sResponses.Empty:
             continue
 
