@@ -11,9 +11,7 @@ services:
         # Listens for HTTP (TCP) traffic on 9191 (prometheus exporter)
         network_mode: host
         userns_mode: host
-        #ports:
-        #  - "9191:9191"
-        #  - "9761:9761/udp"
+        restart: unless-stopped
         volumes:
             - ./config.yml:/app/config.yml:ro
             - ./lightwave_link.py:/app/lightwave_link.py:ro
@@ -24,8 +22,7 @@ services:
         # Listens for HTTP (TCP) traffic on 9090 (prometheus UI)
         network_mode: host
         userns_mode: host
-        #ports:
-        #  - "9090:9090"
+        restart: unless-stopped
         volumes:
             - ./prometheus/prometheus.yml:/app/prometheus.yml
             - prometheus-volume:/app/data/
@@ -36,8 +33,7 @@ services:
         # Listens for HTTP (TCP) traffic on 3000 (Grafana UI)
         network_mode: host
         userns_mode: host
-        #ports:
-        #  - "3000:3000"
+        restart: unless-stopped
         environment:
             - GF_SECURITY_ADMIN_PASSWORD=lightwave
             - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
