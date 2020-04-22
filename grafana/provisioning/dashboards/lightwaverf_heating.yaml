@@ -7,6 +7,6 @@ providers:
   folder: ''
   type: file
   disableDeletion: false
-  updateIntervalSeconds: 300 #how often Grafana will scan for changed dashboards
+  updateIntervalSeconds: 10 #how often Grafana will scan for changed dashboards
   options:
     path: /etc/grafana/provisioning/dashboards
