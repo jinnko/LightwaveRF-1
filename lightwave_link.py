@@ -90,6 +90,10 @@ class LightwaveLink(object):
         "Number of distinct JSON message received",
         ["fn",],
         )
+    sPTransmitFailCounter = prometheus_client.Counter(
+        "lwl_transmit_failures",
+        "Number of transmit failures received",
+        )
 
     def __init__(self):
         import threading
@@ -213,6 +217,13 @@ class LightwaveLink(object):
                         sLog.debug(
                             "Discarding duplicate trans: %s",
                             iResponseTrans)
+
+                elif rMessage.endswith(',ERR,6,"Transmit fail"'):
+                    rMessage = str(rMessage)
+                    failed_transaction_number = str(rMessage).split(',')[0]
+
+                    self.sPTransmitFailCounter.inc()
+                    sLog.debug(f"Transmit failure registered for transaction {failed_transaction_number}")
 
                 elif rMessage.endswith(",OK"):
                     continue
