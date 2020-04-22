@@ -97,6 +97,7 @@ class LightwaveLink(object):
 
     def __init__(self):
         import threading
+        import collections
         self.sSock = self.create_socket()
         self.rAddress = "255.255.255.255"
         self.siTransactionNumber = self.sequence_generator()
@@ -106,6 +107,7 @@ class LightwaveLink(object):
         self.iLastTransactionNumber = 0
         self.rLastCommand = ""
         self.sThread = None
+        self.lPreviousCommands = collections.deque(maxlen=10)
 
     def create_socket(self):
         """Create a listening socket to receive UDP messages from the Lightwave
@@ -154,6 +156,10 @@ class LightwaveLink(object):
         rCommand = "{},{}".format(
             iTransactionNumber,
             rPayload)
+
+        # Put the command on our deque so we can re-transmit if it fails
+        self.lPreviousCommands.appendleft(rCommand)
+
         tDestinationAddress = (
             self.rAddress,
             self.LIGHTWAVE_LINK_COMMAND_PORT)
@@ -225,6 +231,17 @@ class LightwaveLink(object):
 
                     self.sPTransmitFailCounter.inc()
                     sLog.debug(f"Transmit failure registered for transaction {failed_transaction_number}")
+
+                    sLog.debug(f"Previous commands: {self.lPreviousCommands}")
+                    for sPreviousCommand in self.lPreviousCommands:
+                        if sPreviousCommand.split(',')[0] == failed_transaction_number:
+                            rCommand = ",".join(sPreviousCommand.split(',')[1:])
+                            sLog.warning(f"Retransmitting failed command {rCommand} with transaction numnber {failed_transaction_number}")
+                            self.send_command(rCommand)
+                            break
+                        else:
+                            sLog.debug(f"This is not the command we're looking for: {sPreviousCommand}")
+
 
                 elif rMessage.endswith(",OK"):
                     continue
