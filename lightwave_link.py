@@ -195,7 +195,8 @@ class LightwaveLink(object):
             # nonlocal sSock
             # nonlocal sQueue
             iTransactionNumber = 0
-            lPreviousMessages = collections.deque(maxlen=10)
+            lPreviousMessages = collections.deque(maxlen=50)
+
             while True:
                 rMessage = sSock.recv(1024).strip().decode('ascii')
 
