@@ -638,7 +638,6 @@ def load_config():
 
 
 def call_for_heat(sLink, dStatus, skipCfH=False):
-    from time import sleep
 
     lCalling = are_calling_for_heat(dStatus)
 
@@ -657,28 +656,23 @@ def call_for_heat(sLink, dStatus, skipCfH=False):
     OFF = 50.0
     ON = 60.0
     if lCalling:
-        hackCommand = rCommandTemplate.format(sDevice.slot, OFF)
         rCommand = rCommandTemplate.format(sDevice.slot, ON)
     else:
-        hackCommand = rCommandTemplate.format(sDevice.slot, ON)
         rCommand = rCommandTemplate.format(sDevice.slot, OFF)
 
     lNames = [x.rName for x in lCalling]
-    
+
     if bool(sDevice.output) == bool(lCalling):
         sLog.info("Call for heat: NOOP (heating: %s, devices: %s)", bool(sDevice.output), lNames)
         return
 
     if skipCfH:
         sLog.info("Skipping call for heat: %s (command: %s)", lNames, rCommand)
+
     else:
-        sLog.info("Call for heat HACK to force real command later: (heating: %s, devices: %s) (command: %s)", bool(sDevice.output), lNames, hackCommand)
-        sLink.send_command(hackCommand)
-        sleep(5)
 
         sLog.info("Call for heat: (heating: %s, devices: %s) (command: %s)", bool(sDevice.output), lNames, rCommand)
         sLink.send_command(rCommand)
-        sleep(10)
 
 
 def are_calling_for_heat(dStatus):
@@ -779,7 +773,7 @@ def main():
         elif dResponse.get("type") == "log":
             pass
         else:
-            sLog.warning("Unhandled response:\n%s", dResponse)
+            sLog.warning(f"Unhandled response: {dResponse}")
 
         # Request status updates from devices we've not seen for a while.
         # Self-limits how often it performs scans.
