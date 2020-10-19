@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # encoding: utf8
 """
 Monitoring tool for LightwaveRF Heating, based on the API published at
@@ -247,7 +247,11 @@ class LightwaveLink(object):
                     continue
 
                 elif rMessage.startswith("?M="):
-                    sLog.info("Detected apparent reboot of Lightwave Link.")
+                    import os
+                    sLog.info("Detected apparent reboot of Lightwave Link or device.  Restarting this controller.")
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                    os.execl(sys.argv[0], ' ')
 
                 else:
                     sLog.warning(f"Discarding non-JSON response: {rMessage}")
@@ -680,11 +684,20 @@ def call_for_heat(sLink, dStatus, skipCfH=False):
 
 def are_calling_for_heat(dStatus):
     lCalling = []
-    for sDevice in dStatus.values():
-        if sDevice.prod != "valve":
-            continue
-        if sDevice.output:
-            lCalling.append(sDevice)
+
+    # We only want to enable call_for_heat if the valve output is greater
+    # than 10% across all devices.  This is because the boiler struggles
+    # to pump when the valves aren't open enough.
+    #sLog.debug(dStatus)
+    totalOutput = sum([d.output for d in dStatus.values() if d.prod == 'valve' and d.output > 0])
+    sLog.debug(f"Total output is {totalOutput}")
+
+    if totalOutput > 10:
+        for sDevice in dStatus.values():
+            if sDevice.prod != "valve":
+                continue
+            if sDevice.output:
+                lCalling.append(sDevice)
 
     return lCalling
 

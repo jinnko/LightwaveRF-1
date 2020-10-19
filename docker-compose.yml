@@ -1,33 +1,17 @@
-version: "2"
+version: "3.2"
 volumes:
     prometheus-volume:
     grafana-volume:
 services:
-    lightwaverf:
+    lwrf-cfh:
         build:
             context: .
-            dockerfile: Dockerfile.arm32v7
+            dockerfile: Dockerfile.arm32v6
+        restart: unless-stopped
+        volumes:
+            - ./config.yml:/app/config.yml:ro
+            - ./lightwave_link.py:/app/lightwave_link.py:ro
         # Listens for UDP broadcast traffic on port 9761 (LightwaveRF responses)
         # Listens for HTTP (TCP) traffic on 9191 (prometheus exporter)
+        userns_mode: host
         network_mode: host
-    prometheus:
-        build:
-            context: prometheus/
-            dockerfile: Dockerfile.arm32v7
-        # Listens for HTTP (TCP) traffic on 9090 (prometheus UI)
-        network_mode: host
-        volumes:
-            - prometheus-volume:/app/data/
-    grafana:
-        image: grafana/grafana-arm32v7-linux:5.4.3
-        depends_on:
-            - prometheus
-        # Listens for HTTP (TCP) traffic on 3000 (Grafana UI)
-        network_mode: host
-        environment:
-            - GF_SECURITY_ADMIN_PASSWORD=lightwave
-            - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
-            - GF_AUTH_ANONYMOUS_ENABLED=true
-        volumes:
-            - ./grafana/provisioning/:/etc/grafana/provisioning/:ro
-            - grafana-volume:/var/lib/grafana
